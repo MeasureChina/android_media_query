@@ -66,7 +66,11 @@ public class AndroidmediaqueryModule extends KrollModule
         String where;
         if (mode == "match") {
             where = MediaStore.Images.Media._ID + " = ?";
-        } else {
+        }
+        else if (mode == "less_than") {
+            where = MediaStore.Images.Media._ID + " < ?";
+        }
+        else {
             where = MediaStore.Images.Media._ID + " > ?";
         }
         
