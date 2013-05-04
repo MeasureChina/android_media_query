@@ -17,11 +17,12 @@ Ti.API.info("module is => " + AndroidMediaQuery);
 
 
 // get all photos
-var photos = AndroidMediaQuery.queryPhotos("all", null, null);
+// var photos = AndroidMediaQuery.queryPhotos("all", null, null);
+var photos = AndroidMediaQuery.queryPhotos('less_than', 29, 10);
 
 for (var i in photos) {
 	var photo = photos[i];
-	
+	console.log(photo.id)
 	var row = Ti.UI.createTableViewRow({
 		width: Ti.UI.FILL,
 		height: Ti.UI.SIZE,

@@ -55,7 +55,7 @@ public class AndroidmediaqueryModule extends KrollModule
 	@Kroll.method
 	public KrollDict queryPhotos(String mode, Integer id, Integer limit)
 	{
-		Log.d(TAG, "queryPhotos called");
+		Log.d(TAG, "queryPhotos called: " + mode);
 
         // query condition
 		Uri externalPhotosUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
@@ -64,13 +64,16 @@ public class AndroidmediaqueryModule extends KrollModule
         String[] whereParams = { id.toString() };
 
         String where;
-        if (mode == "match") {
+        if (mode.equals("match")) {
+            Log.d(TAG, "where: match = ");
             where = MediaStore.Images.Media._ID + " = ?";
         }
-        else if (mode == "less_than") {
+        else if (mode.equals("less_than")) {
+            Log.d(TAG, "where: less_than < ");
             where = MediaStore.Images.Media._ID + " < ?";
         }
         else {
+            Log.d(TAG, "where(default): greater_than > ");
             where = MediaStore.Images.Media._ID + " > ?";
         }
         
