@@ -18,7 +18,7 @@ Ti.API.info("module is => " + AndroidMediaQuery);
 
 // get all photos
 // var photos = AndroidMediaQuery.queryPhotos("all", null, null);
-var photos = AndroidMediaQuery.queryPhotos('less_than', 29, 10);
+var photos = AndroidMediaQuery.queryPhotos('greater_than', 0, 30);
 
 for (var i in photos) {
 	var photo = photos[i];

@@ -18,6 +18,7 @@ import org.appcelerator.titanium.TiBlob;
 
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
 
 import android.app.Activity;
 import android.net.Uri;
@@ -146,17 +147,43 @@ public class AndroidmediaqueryModule extends KrollModule
         
 		return result;
 	}
-	
+		
+		public static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth) {
+		    // Raw height and width of image
+		    final int height = options.outHeight;
+		    final int width = options.outWidth;
+		    int inSampleSize = 1;
+				
+				
+		    if (width > reqWidth) {
+
+		        // Calculate ratios of height and width to requested height and width
+		        // final int heightRatio = Math.round((float) height / (float) reqHeight);
+		        final int widthRatio = Math.round((float) width / (float) reqWidth);
+
+		        // Choose the smallest ratio as inSampleSize value, this will guarantee
+		        // a final image with both dimensions larger than or equal to the
+		        // requested height and width.
+		        inSampleSize = widthRatio;//heightRatio < widthRatio ? heightRatio : widthRatio;
+		    }
+				
+		    return inSampleSize;
+		}
+		
     @Kroll.method
     public TiBlob getThumbnail(Integer id, String fileName)
     {
+				// fileName = fileName.replaceFirst("file://", "");
+			
         try {
             ExifInterface exif = new ExifInterface(fileName);
             
             if (exif.hasThumbnail()) {
                 byte[] thumbnail = exif.getThumbnail();
                 Log.d(TAG, "thumbnail's (EXIF) length = " + thumbnail.length);
-                return TiBlob.blobFromImage(BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length));
+
+								return TiBlob.blobFromData(thumbnail, "image/jpeg"); // http://developer.android.com/reference/android/media/ExifInterface.html
+                // return TiBlob.blobFromImage(BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length));
             }
 
             Log.d(TAG, "no exif-thumbnail()");
@@ -169,12 +196,49 @@ public class AndroidmediaqueryModule extends KrollModule
         // create thumbnail
         Log.d(TAG, fileName);
 
-		Activity activity = this.getActivity();
-        Bitmap th = MediaStore.Images.Thumbnails.getThumbnail(activity.getContentResolver(), id.intValue(), MediaStore.Images.Thumbnails.MICRO_KIND, null);
-        if (th != null) {
-            TiBlob blob = TiBlob.blobFromImage(th);
-            th.recycle();
-            return blob;
+		// Activity activity = this.getActivity();
+        // Bitmap th = MediaStore.Images.Thumbnails.getThumbnail(activity.getContentResolver(), id.intValue(), MediaStore.Images.Thumbnails.MICRO_KIND, null);
+        
+				final BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+				BitmapFactory.decodeFile(fileName, bmOptions);
+				
+				final int height = bmOptions.outHeight;
+		    final int width = bmOptions.outWidth;
+				
+				bmOptions.inSampleSize = calculateInSampleSize(bmOptions, 640);
+				
+				Bitmap th;
+				if (width > 640) {
+					Bitmap temp = BitmapFactory.decodeFile(fileName, bmOptions);
+					th = Bitmap.createScaledBitmap(temp, 640, Math.round((float) height * (float) 640 / (float) width), false);
+					
+					temp.recycle();
+					temp = null;
+				}
+				else {
+					th = BitmapFactory.decodeFile(fileName, bmOptions);
+				}
+				
+				if (th != null) {
+						
+						try {
+		            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+								th.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+								th.recycle();
+
+								byte[] byteArray = stream.toByteArray();
+								stream.close();
+								stream = null;
+
+		            TiBlob blob = TiBlob.blobFromData(byteArray, "image/jpeg");
+
+		            return blob;
+		        }
+		        catch(Exception e) {
+		            Log.d(TAG, "ByteArrayOutputStream - ERROR");
+		            Log.d(TAG, e.getMessage());
+		        }
         }
         
         Log.d(TAG, "MediaStore.Images.Thumbnails.getThumbnail() returns null:");
