@@ -3,4 +3,5 @@ build/
 build.log
 .DS_Store
 dist/
+build.properties
 
