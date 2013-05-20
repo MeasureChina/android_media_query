@@ -50,7 +50,7 @@ for (var i in photos) {
 	row.add(info4);
 	
 	var th = AndroidMediaQuery.getThumbnail(parseInt(photo.id), photo.path);
-	
+	// var th = AndroidMediaQuery.createResizedImage(photo.path, photo.width || 0, photo.height || 0);
 	var img = Ti.UI.createImageView({
 		image: th,
 		width: Ti.UI.SIZE,
