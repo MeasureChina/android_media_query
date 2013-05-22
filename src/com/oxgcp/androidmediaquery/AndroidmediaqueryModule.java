@@ -95,9 +95,9 @@ public class AndroidmediaqueryModule extends KrollModule
 			MediaStore.Images.Media.LATITUDE,
 			MediaStore.Images.Media.LONGITUDE,
 			MediaStore.Images.Media.SIZE,
-			MediaStore.Images.Media.MIME_TYPE,
-			"width", // MediaStore.Images.Media.WIDTH나 HEIGHT를 못찾음
-			"height",
+			// MediaStore.Images.Media.MIME_TYPE,
+			// "width", // MediaStore.Images.Media.WIDTH나 HEIGHT를 못찾음
+			// "height",
 		};
         
         // make managedQuery:
@@ -127,11 +127,11 @@ public class AndroidmediaqueryModule extends KrollModule
 				try {
 					ExifInterface exif = new ExifInterface(path);
 					// width, height
-					String width = c.getInt(c.getColumnIndex("width")) > 0 ? "" + c.getInt(c.getColumnIndex("width")) :  exif.getAttribute("ImageWidth"); // media query 에서 가져오지 못했다고 판단될 경우
-					String height = c.getInt(c.getColumnIndex("height")) > 0 ? "" + c.getInt(c.getColumnIndex("height")) :  exif.getAttribute("ImageLength"); // exif 에서 가져옴
+					// String width = c.getInt(c.getColumnIndex("width")) > 0 ? "" + c.getInt(c.getColumnIndex("width")) :  exif.getAttribute("ImageWidth"); // media query 에서 가져오지 못했다고 판단될 경우
+					// String height = c.getInt(c.getColumnIndex("height")) > 0 ? "" + c.getInt(c.getColumnIndex("height")) :  exif.getAttribute("ImageLength"); // exif 에서 가져옴
 					
-					obj.put("width", width);
-					obj.put("height", height);
+					obj.put("width", exif.getAttribute("ImageWidth"));
+					obj.put("height", exif.getAttribute("ImageLength"));
 					// gps processing method
 					obj.put("gpsMethod", exif.getAttribute("GPSProcessingMethod"));
 					// gps timestamp
@@ -247,7 +247,7 @@ public class AndroidmediaqueryModule extends KrollModule
 	}
 	
 	@Kroll.method
-	public TiBlob createResizedImage(String fileName, int width, int height)
+	public TiBlob createResizedImage(String fileName)
 	{	
 		
 		fileName = fileName.replaceFirst("file://", "");
@@ -262,13 +262,15 @@ public class AndroidmediaqueryModule extends KrollModule
 			Log.d(TAG, e.getMessage());
 		}
 		
-		final BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+		BitmapFactory.Options opts = new BitmapFactory.Options(); // 실제 적용을 위한 bitmap option
+		final BitmapFactory.Options bmOptions = new BitmapFactory.Options(); // image size를 알기 위한 bitmap option
+		bmOptions.inJustDecodeBounds = true;
 		
-		if (width == 0 || height == 0){
-			BitmapFactory.decodeFile(fileName, bmOptions);
-			height = bmOptions.outHeight;
-			width = bmOptions.outWidth;
-		}
+		// if (width == 0 || height == 0){
+		BitmapFactory.decodeFile(fileName, bmOptions);
+		int height = bmOptions.outHeight;
+		int width = bmOptions.outWidth;
+		// }
 		
 		// init
 		Bitmap th = null;
@@ -277,26 +279,26 @@ public class AndroidmediaqueryModule extends KrollModule
 		
 		// resize
 		if (orientation == 6 || orientation == 8) { // 90도나 270도로 돌아가있는 경우
-			bmOptions.inSampleSize = calculateInSampleSize(height, 640);
+			opts.inSampleSize = calculateInSampleSize(height, 640);
 			
 			if (width > 640) {
-				temp = BitmapFactory.decodeFile(fileName, bmOptions);
+				temp = BitmapFactory.decodeFile(fileName, opts);
 				th = Bitmap.createScaledBitmap(temp, Math.round((float) width * (float) 640 / (float) height), 640, false);
 			}
 			else {
-				th = BitmapFactory.decodeFile(fileName, bmOptions);
+				th = BitmapFactory.decodeFile(fileName, opts);
 			}
 			
 		}
 		else {
-			bmOptions.inSampleSize = calculateInSampleSize(width, 640);
+			opts.inSampleSize = calculateInSampleSize(width, 640);
 			
 			if (width > 640) {
-				temp = BitmapFactory.decodeFile(fileName, bmOptions);
+				temp = BitmapFactory.decodeFile(fileName, opts);
 				th = Bitmap.createScaledBitmap(temp, 640, Math.round((float) height * (float) 640 / (float) width), false);
 			}
 			else {
-				th = BitmapFactory.decodeFile(fileName, bmOptions);
+				th = BitmapFactory.decodeFile(fileName, opts);
 			}
 		}
 		
