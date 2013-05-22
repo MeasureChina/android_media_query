@@ -267,9 +267,10 @@ public class AndroidmediaqueryModule extends KrollModule
 		bmOptions.inJustDecodeBounds = true;
 		
 		// if (width == 0 || height == 0){
-		BitmapFactory.decodeFile(fileName, bmOptions);
+		Bitmap justBound = BitmapFactory.decodeFile(fileName, bmOptions);
 		int height = bmOptions.outHeight;
 		int width = bmOptions.outWidth;
+		justBound.recycle();
 		
 		// init
 		Bitmap th = null;
@@ -322,16 +323,16 @@ public class AndroidmediaqueryModule extends KrollModule
 
 				rotateMatrix.postRotate(degreeToRotate);
 				
-				th = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
-				
+				Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
 				
 				// mimetype을 지정하기 위함
 				ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		
-				th.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-				
+				rotated.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+
 				th.recycle();
+				rotated.recycle();
 				if (temp != null) temp.recycle();
+				
 				
 				byte[] byteArray = stream.toByteArray();
 				stream.close();
