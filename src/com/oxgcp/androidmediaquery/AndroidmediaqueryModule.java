@@ -264,7 +264,7 @@ public class AndroidmediaqueryModule extends KrollModule
 		
 		final BitmapFactory.Options bmOptions = new BitmapFactory.Options();
 		
-		if (width == 0 || height == 0){
+		if (width == 0 || height == 0) {
 			BitmapFactory.decodeFile(fileName, bmOptions);
 			height = bmOptions.outHeight;
 			width = bmOptions.outWidth;
