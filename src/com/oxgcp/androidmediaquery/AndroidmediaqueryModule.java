@@ -19,7 +19,9 @@ import org.appcelerator.titanium.TiBlob;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 
 import android.app.Activity;
 import android.net.Uri;
@@ -363,36 +365,48 @@ public class AndroidmediaqueryModule extends KrollModule
 	
 	
 	@Kroll.method
-	public TiBlob replaceMimeType(TiBlob blob) {
-		InputStream inputStream = blob.getInputStream();
-		Bitmap image = BitmapFactory.decodeStream(inputStream);
+	public TiBlob replaceMimeType(Object blob) {
 		
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+		byte[] byteArray;
+		Bitmap image;
+		ByteArrayOutputStream outputStream = outputStream = new ByteArrayOutputStream();
 		
-		byte[] byteArray = outputStream.toByteArray();
-		
-		try{
-			outputStream.close();
-			outputStream = null;
-
-			inputStream.close();
-			inputStream = null;
-		} catch(Exception e) {
-			Log.d(TAG, "Stream Close - ERROR");
-			Log.d(TAG, e.getMessage());
+		if (blob instanceof TiBlob) {
 			
-			outputStream = null;
-			inputStream = null;
+			TiBlob temp = (TiBlob) blob;
+			
+			InputStream inputStream = temp.getInputStream();
+			image = BitmapFactory.decodeStream(inputStream);
+			image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+			
+			byteArray = outputStream.toByteArray();
+			
+			try{
+				outputStream.close();
+				outputStream = null;
+
+				inputStream.close();
+				inputStream = null;
+			} catch(Exception e) {
+				Log.d(TAG, "Stream Close - ERROR");
+				Log.d(TAG, e.getMessage());
+
+				outputStream = null;
+				inputStream = null;
+			}
+			
+		}
+		else {
+			
+			Log.d(TAG, "not Matched type - ERROR");
+			
+			return null;
 		}
 		
 		image.recycle();
 		image = null;
 		
-		
-		blob = TiBlob.blobFromData(byteArray, "image/jpeg");
-		
-		return blob;
+		return TiBlob.blobFromData(byteArray, "image/jpeg");
 	}
 	
 }
