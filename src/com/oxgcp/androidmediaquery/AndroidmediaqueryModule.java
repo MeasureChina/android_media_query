@@ -19,6 +19,7 @@ import org.appcelerator.titanium.TiBlob;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 import android.app.Activity;
 import android.net.Uri;
@@ -247,8 +248,12 @@ public class AndroidmediaqueryModule extends KrollModule
 	}
 	
 	@Kroll.method
-	public TiBlob createResizedImage(String fileName)
+	public TiBlob createResizedImage(String fileName, Integer reqWidth)
 	{	
+		
+		if (reqWidth == null || reqWidth == 0) {
+			reqWidth = 640;
+		}
 		
 		fileName = fileName.replaceFirst("file://", "");
 		
@@ -280,11 +285,11 @@ public class AndroidmediaqueryModule extends KrollModule
 		
 		// resize
 		if (orientation == 6 || orientation == 8) { // 90도나 270도로 돌아가있는 경우
-			opts.inSampleSize = calculateInSampleSize(height, 640);
+			opts.inSampleSize = calculateInSampleSize(height, reqWidth);
 			
-			if (width > 640) {
+			if (width > reqWidth) {
 				temp = BitmapFactory.decodeFile(fileName, opts);
-				th = Bitmap.createScaledBitmap(temp, Math.round((float) width * (float) 640 / (float) height), 640, false);
+				th = Bitmap.createScaledBitmap(temp, Math.round((float) width * (float) reqWidth / (float) height), reqWidth, false);
 			}
 			else {
 				th = BitmapFactory.decodeFile(fileName, opts);
@@ -292,11 +297,11 @@ public class AndroidmediaqueryModule extends KrollModule
 			
 		}
 		else {
-			opts.inSampleSize = calculateInSampleSize(width, 640);
+			opts.inSampleSize = calculateInSampleSize(width, reqWidth);
 			
-			if (width > 640) {
+			if (width > reqWidth) {
 				temp = BitmapFactory.decodeFile(fileName, opts);
-				th = Bitmap.createScaledBitmap(temp, 640, Math.round((float) height * (float) 640 / (float) width), false);
+				th = Bitmap.createScaledBitmap(temp, reqWidth, Math.round((float) height * (float) reqWidth / (float) width), false);
 			}
 			else {
 				th = BitmapFactory.decodeFile(fileName, opts);
@@ -355,5 +360,40 @@ public class AndroidmediaqueryModule extends KrollModule
 		
 		return null;
 	}
+	
+	
+	@Kroll.method
+	public TiBlob replaceMimeType(TiBlob blob) {
+		InputStream inputStream = blob.getInputStream();
+		Bitmap image = BitmapFactory.decodeStream(inputStream);
+		
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+		
+		byte[] byteArray = outputStream.toByteArray();
+		
+		try{
+			outputStream.close();
+			outputStream = null;
+
+			inputStream.close();
+			inputStream = null;
+		} catch(Exception e) {
+			Log.d(TAG, "Stream Close - ERROR");
+			Log.d(TAG, e.getMessage());
+			
+			outputStream = null;
+			inputStream = null;
+		}
+		
+		image.recycle();
+		image = null;
+		
+		
+		blob = TiBlob.blobFromData(byteArray, "image/jpeg");
+		
+		return blob;
+	}
+	
 }
 
