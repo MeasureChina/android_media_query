@@ -52,25 +52,28 @@ for (var i in photos) {
 	// var th = AndroidMediaQuery.getThumbnail(parseInt(photo.id), photo.path);
 	var th = AndroidMediaQuery.createResizedImage(photo.path, null);//, photo.width || 0, photo.height || 0);
 	
-	var blobStream = Ti.Stream.createStream({ source: th, mode: Ti.Stream.MODE_READ });
-	var tempBuffer = Ti.createBuffer({ length: th.length });
-	var bytes = blobStream.read(tempBuffer);
-	// 
-	blobStream.close();
-	blobStream = null;
-	// 
-	console.log("bytes :: ");
-	console.log(bytes);
+	// var blobStream = Ti.Stream.createStream({ source: th, mode: Ti.Stream.MODE_READ });
+	// var tempBuffer = Ti.createBuffer({ length: th.length });
+	// var bytes = blobStream.read(tempBuffer);
+	// // 
+	// blobStream.close();
+	// blobStream = null;
+	// // 
+	// console.log("bytes :: ");
+	// console.log(bytes);
 	
 	var img = Ti.UI.createImageView({
-		image: AndroidMediaQuery.replaceMimeType(tempBuffer.toBlob()),
+		// image: AndroidMediaQuery.replaceMimeType(tempBuffer.toBlob()),
+		image: th,
 		width: Ti.UI.SIZE,
 		height: Ti.UI.SIZE,
 	});
 	row.add(img);
 
-	tempBuffer.clear();
-	tempBuffer = null;
+	// tempBuffer.clear();
+	// tempBuffer = null;
+	
+	th = undefined;
 
 	table.appendRow(row);
 }

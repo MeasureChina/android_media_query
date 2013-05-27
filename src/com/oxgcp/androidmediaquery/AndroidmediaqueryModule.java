@@ -309,6 +309,7 @@ public class AndroidmediaqueryModule extends KrollModule
 				th = BitmapFactory.decodeFile(fileName, opts);
 			}
 		}
+		if (temp != null) temp.recycle();
 		
 		// return
 		if (th != null) {
@@ -341,21 +342,21 @@ public class AndroidmediaqueryModule extends KrollModule
 
 				th.recycle();
 				rotated.recycle();
-				if (temp != null) temp.recycle();
+				// if (temp != null) temp.recycle();
 				
 				
 				byte[] byteArray = stream.toByteArray();
 				stream.close();
 				stream = null;
-		
+				
 				TiBlob blob = TiBlob.blobFromData(byteArray, "image/jpeg");
-		
+				
 				return blob;
 			}
 			catch(Exception e) {
 				Log.d(TAG, "ByteArrayOutputStream - ERROR");
 				Log.d(TAG, e.getMessage());
-		
+				
 				return null;
 			}
 		}
