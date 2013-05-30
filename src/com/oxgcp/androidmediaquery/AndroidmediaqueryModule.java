@@ -118,9 +118,10 @@ public class AndroidmediaqueryModule extends KrollModule
             
 			for (Integer i=0; !c.isAfterLast(); i++) {
 				
+				String _id = c.getString(c.getColumnIndex(MediaStore.Images.Media._ID));
 				String path = c.getString(c.getColumnIndex(MediaStore.Images.Media.DATA));
 				// id, path, date_taken
-				obj.put("id", c.getString(c.getColumnIndex(MediaStore.Images.Media._ID)));
+				obj.put("id", _id);
 				obj.put("path", path);
 				obj.put("dateTaken", c.getString(c.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)));
 				// gps info
@@ -151,7 +152,7 @@ public class AndroidmediaqueryModule extends KrollModule
 					Log.d(TAG, e.getMessage());
 				}
                 
-				result.put(i.toString(), new KrollDict(obj)); //add the item
+				result.put(_id, new KrollDict(obj)); //add the item
 
 				c.moveToNext();
 			}
@@ -193,10 +194,11 @@ public class AndroidmediaqueryModule extends KrollModule
 				Log.d(TAG, "thumbnail's (EXIF) length = " + thumbnail.length);
 				
 				Bitmap th = BitmapFactory.decodeByteArray(thumbnail, 0, thumbnail.length);
-				th = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
+				Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
 				
-				TiBlob blob = TiBlob.blobFromImage(th);
+				TiBlob blob = TiBlob.blobFromImage(rotated);
 				th.recycle();
+				// rotated.recycle();
 				
 				return blob;
 			}
@@ -213,16 +215,17 @@ public class AndroidmediaqueryModule extends KrollModule
 
 		Activity activity = this.getActivity();
 		Bitmap th = MediaStore.Images.Thumbnails.getThumbnail(activity.getContentResolver(), id.intValue(), MediaStore.Images.Thumbnails.MICRO_KIND, null);
-      
+      	
 		
 		if (th != null) {
 				
 			try {
 				
-				th = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
+				Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
 				
-				TiBlob blob = TiBlob.blobFromImage(th);
+				TiBlob blob = TiBlob.blobFromImage(rotated);
 				th.recycle();
+				// rotated.recycle();
 
 				return blob;
 			}
