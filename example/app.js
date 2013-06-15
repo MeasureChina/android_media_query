@@ -49,8 +49,8 @@ for (var i in photos) {
 	});
 	row.add(info4);
 	
-	var th = AndroidMediaQuery.getThumbnail(parseInt(photo.id), photo.path);
-	// var th = AndroidMediaQuery.createResizedImage(photo.path, null);//, photo.width || 0, photo.height || 0);
+	// var th = AndroidMediaQuery.getThumbnail(parseInt(photo.id), photo.path);
+	var th = AndroidMediaQuery.createResizedImage(photo.path, null);//, photo.width || 0, photo.height || 0);
 	
 	// var blobStream = Ti.Stream.createStream({ source: th, mode: Ti.Stream.MODE_READ });
 	// var tempBuffer = Ti.createBuffer({ length: th.length });

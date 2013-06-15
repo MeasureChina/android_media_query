@@ -21,6 +21,10 @@ import java.util.ArrayList;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.IOException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.ObjectOutputStream;
 
 import android.app.Activity;
@@ -251,7 +255,46 @@ public class AndroidmediaqueryModule extends KrollModule
 				
 		return inSampleSize;
 	}
-	
+
+	public Bitmap decodeSampledBitmapFromResourceMemOpt(InputStream inputStream, int reqWidth) {
+		byte[] byteArr = new byte[0];
+		byte[] buffer = new byte[1024];
+		int len;
+		int count = 0;
+
+		try {
+			while ((len = inputStream.read(buffer)) > -1) {
+				if (len != 0) {
+					if (count + len > byteArr.length) {
+						byte[] newbuf = new byte[(count + len) * 2];
+						System.arraycopy(byteArr, 0, newbuf, 0, count);
+						byteArr = newbuf;
+					}
+
+					System.arraycopy(buffer, 0, byteArr, count, len);
+					count += len;
+				}
+			}
+
+			final BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
+			BitmapFactory.decodeByteArray(byteArr, 0, count, options);
+
+			options.inSampleSize = calculateInSampleSize(options.outWidth, reqWidth); // width만 사용한다.
+			options.inPurgeable = true;
+			options.inInputShareable = true;
+			options.inJustDecodeBounds = false;
+			options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+
+			return BitmapFactory.decodeByteArray(byteArr, 0, count, options);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			
+			return null;
+		}
+	}
+				
 	@Kroll.method
 	public TiBlob createResizedImage(String fileName, Integer reqWidth)
 	{	
@@ -272,96 +315,57 @@ public class AndroidmediaqueryModule extends KrollModule
 			Log.d(TAG, e.getMessage());
 		}
 		
-		BitmapFactory.Options opts = new BitmapFactory.Options(); // 실제 적용을 위한 bitmap option
-		final BitmapFactory.Options bmOptions = new BitmapFactory.Options(); // image size를 알기 위한 bitmap option
-		bmOptions.inJustDecodeBounds = true;
-		
-		// if (width == 0 || height == 0){
-		// Bitmap justBound = BitmapFactory.decodeFile(fileName, bmOptions);
-		BitmapFactory.decodeFile(fileName, bmOptions);
-		int height = bmOptions.outHeight;
-		int width = bmOptions.outWidth;
-		// justBound.recycle();
-		
-		// init
+		//
 		Bitmap th = null;
-		Bitmap temp = null;
+		FileInputStream inputStream;
+		File file = new File(fileName);
 		
-		
-		// resize
-		if (orientation == 6 || orientation == 8) { // 90도나 270도로 돌아가있는 경우
-			opts.inSampleSize = calculateInSampleSize(height, reqWidth);
-			
-			if (width > reqWidth) {
-				temp = BitmapFactory.decodeFile(fileName, opts);
-				th = Bitmap.createScaledBitmap(temp, Math.round((float) width * (float) reqWidth / (float) height), reqWidth, false);
-			}
-			else {
-				th = BitmapFactory.decodeFile(fileName, opts);
-			}
-			
+		try {
+			inputStream = new FileInputStream(file);
+			th = decodeSampledBitmapFromResourceMemOpt(inputStream, reqWidth);
+			inputStream.close();
 		}
-		else {
-			opts.inSampleSize = calculateInSampleSize(width, reqWidth);
-			
-			if (width > reqWidth) {
-				temp = BitmapFactory.decodeFile(fileName, opts);
-				th = Bitmap.createScaledBitmap(temp, reqWidth, Math.round((float) height * (float) reqWidth / (float) width), false);
-			}
-			else {
-				th = BitmapFactory.decodeFile(fileName, opts);
-			}
+		catch (IOException e) {
+			Log.d(TAG, "File Not Found");
+			e.printStackTrace();
+			return null;
 		}
-		if (temp != null) temp.recycle();
 		
-		// return
-		if (th != null) {
-			try {
-				
-				// Orientation에 따라 사진 회전
+		try {
+			// Orientation에 따라 사진 회전
+			Matrix rotateMatrix = new Matrix();
+			float degreeToRotate = 0.0f;
 
-				Matrix rotateMatrix = new Matrix();
-				float degreeToRotate = 0.0f;
-
-				if (orientation == 6) { // 90 degree
-					degreeToRotate = 90.0f;
-				}
-				else if (orientation == 3) { // 180 degree
-					degreeToRotate = 180.0f;
-				}
-				else if (orientation == 8) { // 270 degree
-					degreeToRotate = 270.0f;
-				}
-
-				rotateMatrix.postRotate(degreeToRotate);
-				
-				Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
-				// th = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, false);
-				
-				// mimetype을 지정하기 위함
-				ByteArrayOutputStream stream = new ByteArrayOutputStream();
-				rotated.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-				// th.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-
-				th.recycle();
-				rotated.recycle();
-				// if (temp != null) temp.recycle();
-				
-				
-				byte[] byteArray = stream.toByteArray();
-				stream.close();
-				stream = null;
-				
-				TiBlob blob = TiBlob.blobFromData(byteArray, "image/jpeg");
-				
-				return blob;
+			if (orientation == 6) { // 90 degree
+				degreeToRotate = 90.0f;
 			}
-			catch(Exception e) {
-				Log.d(TAG, "ByteArrayOutputStream - ERROR");
-				Log.d(TAG, e.getMessage());
-				
-				return null;
+			else if (orientation == 3) { // 180 degree
+				degreeToRotate = 180.0f;
 			}
+			else if (orientation == 8) { // 270 degree
+				degreeToRotate = 270.0f;
+			}
+			
+			rotateMatrix.postRotate(degreeToRotate);
+			
+			Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, true);
+			
+			// mimetype을 지정하기 위함
+			ByteArrayOutputStream stream = new ByteArrayOutputStream();
+			rotated.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+
+			th.recycle();
+			rotated.recycle();
+			
+			byte[] byteArray = stream.toByteArray();
+			stream.close();
+			stream = null;
+			
+			return TiBlob.blobFromData(byteArray, "image/jpeg");
+		}
+		catch(Exception e) {
+			Log.d(TAG, "ByteArrayOutputStream - ERROR");
+			Log.d(TAG, e.getMessage());
 		}
 		
 		return null;
