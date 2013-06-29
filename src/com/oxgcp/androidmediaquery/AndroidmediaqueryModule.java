@@ -18,12 +18,15 @@ import org.appcelerator.titanium.TiBlob;
 
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Random;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.ObjectOutputStream;
 
@@ -32,6 +35,7 @@ import android.net.Uri;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Rect;
 import android.provider.MediaStore;
 import android.media.ExifInterface;
 import android.graphics.Matrix;
@@ -143,8 +147,8 @@ public class AndroidmediaqueryModule extends KrollModule
 					// gps processing method
 					obj.put("gpsMethod", exif.getAttribute("GPSProcessingMethod"));
 					// gps timestamp
-					obj.put("gpsTime", exif.getAttribute("GPSDateStamp"));
-					obj.put("gpsDate", exif.getAttribute("GPSTimeStamp"));
+					obj.put("gpsDate", exif.getAttribute("GPSDateStamp"));
+					obj.put("gpsTime", exif.getAttribute("GPSTimeStamp"));
 					// gps location
 					float[] latlong = new float [] { 0.0f, 0.0f };
 					exif.getLatLong(latlong);
@@ -239,7 +243,7 @@ public class AndroidmediaqueryModule extends KrollModule
 				return null;
 			}
 		}
-      
+      	
 		Log.d(TAG, "MediaStore.Images.Thumbnails.getThumbnail() returns null:");
 		return null;
 	}
@@ -256,47 +260,27 @@ public class AndroidmediaqueryModule extends KrollModule
 		return inSampleSize;
 	}
 
-	public Bitmap decodeSampledBitmapFromResourceMemOpt(InputStream inputStream, int reqWidth) {
-		byte[] byteArr = new byte[0];
-		byte[] buffer = new byte[1024];
-		int len;
-		int count = 0;
-
+	public Bitmap decodeSampledBitmapFromResourceMemOpt(File f, int reqWidth) {
 		try {
-			while ((len = inputStream.read(buffer)) > -1) {
-				if (len != 0) {
-					if (count + len > byteArr.length) {
-						byte[] newbuf = new byte[(count + len) * 2];
-						System.arraycopy(byteArr, 0, newbuf, 0, count);
-						byteArr = newbuf;
-					}
-
-					System.arraycopy(buffer, 0, byteArr, count, len);
-					count += len;
-				}
-			}
-
 			final BitmapFactory.Options options = new BitmapFactory.Options();
 			options.inJustDecodeBounds = true;
-			BitmapFactory.decodeByteArray(byteArr, 0, count, options);
+			BitmapFactory.decodeStream(new FileInputStream(f), null, options);
 
 			options.inSampleSize = calculateInSampleSize(options.outWidth, reqWidth); // width만 사용한다.
 			options.inPurgeable = true;
 			options.inInputShareable = true;
 			options.inJustDecodeBounds = false;
-			options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-			return BitmapFactory.decodeByteArray(byteArr, 0, count, options);
+			options.inPreferredConfig = Bitmap.Config.RGB_565; // ARGB_8888
+			return BitmapFactory.decodeStream(new FileInputStream(f), null, options);
 
 		} catch (Exception e) {
 			e.printStackTrace();
-			
 			return null;
 		}
 	}
 				
 	@Kroll.method
-	public TiBlob createResizedImage(String fileName, Integer reqWidth)
+	public String createResizedImage(String fileName, Integer reqWidth)
 	{	
 		
 		if (reqWidth == null || reqWidth == 0) {
@@ -321,47 +305,54 @@ public class AndroidmediaqueryModule extends KrollModule
 		File file = new File(fileName);
 		
 		try {
-			inputStream = new FileInputStream(file);
-			th = decodeSampledBitmapFromResourceMemOpt(inputStream, reqWidth);
-			inputStream.close();
+			th = decodeSampledBitmapFromResourceMemOpt(file, reqWidth);
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			Log.d(TAG, "File Not Found");
 			e.printStackTrace();
 			return null;
 		}
 		
+		// Orientation에 따라 사진 회전
+		Matrix rotateMatrix = new Matrix();
+		float degreeToRotate = 0.0f;
+
+		if (orientation == 6) { // 90 degree
+			degreeToRotate = 90.0f;
+		}
+		else if (orientation == 3) { // 180 degree
+			degreeToRotate = 180.0f;
+		}
+		else if (orientation == 8) { // 270 degree
+			degreeToRotate = 270.0f;
+		}
+		
+		rotateMatrix.postRotate(degreeToRotate);
+		
+		Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, true);
+
 		try {
-			// Orientation에 따라 사진 회전
-			Matrix rotateMatrix = new Matrix();
-			float degreeToRotate = 0.0f;
-
-			if (orientation == 6) { // 90 degree
-				degreeToRotate = 90.0f;
-			}
-			else if (orientation == 3) { // 180 degree
-				degreeToRotate = 180.0f;
-			}
-			else if (orientation == 8) { // 270 degree
-				degreeToRotate = 270.0f;
-			}
-			
-			rotateMatrix.postRotate(degreeToRotate);
-			
-			Bitmap rotated = Bitmap.createBitmap(th, 0, 0, th.getWidth(), th.getHeight(), rotateMatrix, true);
-			
 			// mimetype을 지정하기 위함
-			ByteArrayOutputStream stream = new ByteArrayOutputStream();
-			rotated.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+			String cacheDir = this.getActivity().getCacheDir().getPath();
+			Random random = new Random();
+			int i = random.nextInt(9999);
 
-			th.recycle();
-			rotated.recycle();
-			
-			byte[] byteArray = stream.toByteArray();
+			// File에다 저장하고 FilePath를 리턴한다. 메모리이슈때문에.
+			String ouputFileName = cacheDir + "_" + i + ".jpg";
+			FileOutputStream stream = new FileOutputStream(ouputFileName);
+			boolean compressed = rotated.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+			stream.flush();
 			stream.close();
 			stream = null;
 			
-			return TiBlob.blobFromData(byteArray, "image/jpeg");
+			if (compressed) {
+				th.recycle();
+				th = null;
+				rotated.recycle();
+				rotated = null;
+				
+				return ouputFileName;
+			}
 		}
 		catch(Exception e) {
 			Log.d(TAG, "ByteArrayOutputStream - ERROR");
@@ -395,6 +386,7 @@ public class AndroidmediaqueryModule extends KrollModule
 
 				inputStream.close();
 				inputStream = null;
+				
 			} catch(Exception e) {
 				Log.d(TAG, "Stream Close - ERROR");
 				Log.d(TAG, e.getMessage());

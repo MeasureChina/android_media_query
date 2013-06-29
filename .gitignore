@@ -3,5 +3,7 @@ build/
 build.log
 .DS_Store
 dist/
+libs/
 build.properties
+include
 

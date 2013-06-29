@@ -64,7 +64,7 @@ for (var i in photos) {
 	
 	var img = Ti.UI.createImageView({
 		// image: AndroidMediaQuery.replaceMimeType(tempBuffer.toBlob()),
-		image: th,
+		image: "file://" + th,
 		width: Ti.UI.SIZE,
 		height: Ti.UI.SIZE,
 	});
