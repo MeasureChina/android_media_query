@@ -6,7 +6,7 @@
 
 // open a single window
 var win = Ti.UI.createWindow({
-	backgroundColor:'white'
+	backgroundColor: 'white',
 });
 
 var table = Ti.UI.createTableView();
@@ -17,12 +17,15 @@ Ti.API.info("module is => " + AndroidMediaQuery);
 
 
 // get all photos
-// var photos = AndroidMediaQuery.queryPhotos("all", null, null);
-var photos = AndroidMediaQuery.queryPhotos('greater_than', 0, 30);
+var photos = AndroidMediaQuery.queryPhotos(0, 100); // offset, limit
+var rows = [];
 
 for (var i in photos) {
+	
 	var photo = photos[i];
-	console.log(photo.id)
+	
+	console.log(photo)
+	
 	var row = Ti.UI.createTableViewRow({
 		width: Ti.UI.FILL,
 		height: Ti.UI.SIZE,
@@ -33,6 +36,12 @@ for (var i in photos) {
 		text: photo.id + ') ' + photo.path,
 	});
 	row.add(info);
+
+	var info1 = Ti.UI.createLabel({
+		text: "date - " + (new Date(parseInt(photo.dateTaken))).toString(),
+		// text: "date - " + photo.dateTaken,
+	});
+	row.add(info1);
 	
 	var info2 = Ti.UI.createLabel({
 		text: photo.width + 'x' + photo.height,
@@ -49,40 +58,23 @@ for (var i in photos) {
 	});
 	row.add(info4);
 	
-	// var th = AndroidMediaQuery.getThumbnail(parseInt(photo.id), photo.path);
-	var th = AndroidMediaQuery.createResizedImage(photo.path, null);//, photo.width || 0, photo.height || 0);
-	
-	// var blobStream = Ti.Stream.createStream({ source: th, mode: Ti.Stream.MODE_READ });
-	// var tempBuffer = Ti.createBuffer({ length: th.length });
-	// var bytes = blobStream.read(tempBuffer);
-	// // 
-	// blobStream.close();
-	// blobStream = null;
-	// // 
-	// console.log("bytes :: ");
-	// console.log(bytes);
-	
 	var img = Ti.UI.createImageView({
-		// image: AndroidMediaQuery.replaceMimeType(tempBuffer.toBlob()),
-		image: "file://" + th,
-		width: Ti.UI.SIZE,
-		height: Ti.UI.SIZE,
+		image: "file://" + photo.thumbnail,
+		width: photo.thumbnail_width,
+		height: photo.thumbnail_height,
 	});
-	row.add(img);
-
-	// tempBuffer.clear();
-	// tempBuffer = null;
 	
-	th = undefined;
-
-	table.appendRow(row);
+	if (photo.rotate == "1") {
+		img.transform = Ti.UI.create2DMatrix().rotate(90);
+	}
+	
+	row.add(img);
+	
+	rows.push(row);
 }
 
+table.setData(rows);
 
 
 
 win.open();
-
-
-
-
